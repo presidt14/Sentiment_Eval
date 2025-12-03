@@ -1,0 +1,32 @@
+active_models:
+  - mock
+
+gemma:
+  provider: gemma
+  gemma url: "https://internal-gemma-endpoint.example.com/v1/sentiment"
+  timeout_seconds: 10
+
+claude:
+  provider: claude
+  model: "claude-3-haiku-20240307"
+  timeout_seconds: 10
+
+gemini:
+  provider: gemini
+  model: "gemini-1.5-flash"
+  timeout_seconds: 10
+
+deepseek:
+  provider: deepseek
+  model: "deepseek-chat"
+  timeout_seconds: 10
+
+mock:
+  provider: mock
+  seed: 42
+
+schema:
+  labels:
+    - negative
+    - neutral
+    - positive

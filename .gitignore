@@ -1,0 +1,9 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+.DS_Store
+sentiment_eval/results/
+sentiment_eval/.pytest_cache/
+sentiment_eval/.benchmarks/
+sentiment_eval/.mypy_cache/

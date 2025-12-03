@@ -1,0 +1,4 @@
+post_id,supplier,sentiment_t,text
+1,BetCo,positive,"Love this brand, best odds I've seen in ages"
+2,GambleHub,negative,"Site was down again, awful service."
+3,LuckySpin,neutral,"It's okay, nothing special but not terrible either."
