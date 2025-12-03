@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import requests
 import json
 
@@ -7,28 +7,15 @@ from .base import SentimentModel
 
 cfg = load_settings()
 
-DEEPSEEK_PROMPT = """
-You are a sentiment classifier for social-media posts in the i-gaming and regulatory compliance domain.
-
-Classify sentiment as:
-- positive
-- neutral
-- negative
-
-Return JSON only, with:
-{
-  "sentiment": "...",
-  "confidence": 0-1,
-  "reason": "..."
-}
-"""
 
 class DeepseekSentimentModel(SentimentModel):
-    def __init__(self):
+    def __init__(self, prompt_config: Optional[Dict[str, Any]] = None):
         self.name = "deepseek"
         self.model = cfg["deepseek"]["model"]
         self.timeout = cfg["deepseek"].get("timeout_seconds", 10)
         self.api_key = get_env("DEEPSEEK_API_KEY", "")
+        if prompt_config:
+            self.set_prompt_config(prompt_config)
 
     def classify(self, text: str) -> Dict[str, Any]:
         url = "https://api.deepseek.com/v1/chat/completions"
@@ -38,11 +25,15 @@ class DeepseekSentimentModel(SentimentModel):
             "Content-Type": "application/json",
         }
         
+        # Use externalized prompts
+        system_prompt = self.get_system_prompt()
+        user_message = self.get_user_message(text)
+        
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": DEEPSEEK_PROMPT},
-                {"role": "user", "content": text}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
             ],
             "response_format": {"type": "json_object"},
             "max_tokens": 256,

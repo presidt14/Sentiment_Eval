@@ -7,14 +7,19 @@ from .base import SentimentModel
 _POSITIVE_KEYWORDS = ["love", "best", "great", "good", "amazing", "excellent", "fantastic"]
 _NEGATIVE_KEYWORDS = ["hate", "awful", "bad", "worst", "terrible", "slow", "down", "poor"]
 
+# Sarcasm-aware keywords for sarcasm_detector strategy
+_SARCASM_INDICATORS = ["oh great", "just great", "wonderful", "fantastic", "yeah right", "sure", "obviously"]
+
 
 class MockSentimentModel(SentimentModel):
-    def __init__(self, seed: Optional[int] = None) -> None:
+    def __init__(self, seed: Optional[int] = None, prompt_config: Optional[Dict[str, Any]] = None) -> None:
         self.name = "mock"
         self._random = random.Random()
         if seed is not None:
             random.seed(seed)
             self._random.seed(seed)
+        if prompt_config:
+            self.set_prompt_config(prompt_config)
 
     def classify(self, text: str) -> Dict[str, Any]:
         text_lower = text.lower()

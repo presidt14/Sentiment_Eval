@@ -6,9 +6,9 @@ import pandas as pd
 import tqdm
 import tqdm.asyncio
 
-from .config import load_settings
+from .config import load_settings, get_prompt_strategy
 from .data_loader import load_posts, load_staging_batch
-from .models import get_active_models
+from .models import get_active_models, get_active_models_with_strategy
 from .models.base import SentimentModel
 from .utils import ensure_result_dict
 
@@ -117,6 +117,7 @@ def run_batch(
     use_staging: bool = True,
     concurrency: int = DEFAULT_CONCURRENCY,
     use_async: bool = True,
+    prompt_strategy: str | None = None,
 ) -> pd.DataFrame:
     """
     Run batch sentiment analysis on input data.
@@ -130,6 +131,7 @@ def run_batch(
         use_staging: If True and input_path is None, use the staging file.
         concurrency: Maximum concurrent requests for async mode.
         use_async: If True, use async processing. If False, use sync processing.
+        prompt_strategy: Name of prompt strategy from prompts.yaml. If None, uses default.
         
     Returns:
         DataFrame with sentiment analysis results.
@@ -153,7 +155,13 @@ def run_batch(
 
     df = load_posts(input_path)
     cfg = load_settings(config_path) if config_path else load_settings()
-    models = get_active_models(cfg)
+    
+    # Get models with prompt strategy if specified
+    if prompt_strategy:
+        print(f"Using prompt strategy: {prompt_strategy}")
+        models = get_active_models_with_strategy(prompt_strategy, cfg)
+    else:
+        models = get_active_models(cfg)
 
     print(f"Loaded {len(df)} posts. Active models: {[m.name for m in models]}")
     
@@ -255,6 +263,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Use synchronous processing instead of async.",
     )
+    parser.add_argument(
+        "--prompt-strategy",
+        type=str,
+        default=None,
+        help="Prompt strategy name from prompts.yaml (e.g., 'sarcasm_detector', 'strict_compliance').",
+    )
     args = parser.parse_args()
     run_batch(
         args.input, 
@@ -263,4 +277,5 @@ if __name__ == "__main__":
         use_staging=not args.no_staging,
         concurrency=args.concurrency,
         use_async=not args.sync,
+        prompt_strategy=args.prompt_strategy,
     )

@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import requests
 import json
 
@@ -7,38 +7,29 @@ from .base import SentimentModel
 
 cfg = load_settings()
 
-GEMINI_PROMPT = """
-You are a sentiment classifier for social-media posts in the i-gaming and regulatory compliance domain.
-
-Classify sentiment as:
-- positive
-- neutral
-- negative
-
-Return JSON only, with:
-{
-  "sentiment": "...",
-  "confidence": 0-1,
-  "reason": "..."
-}
-"""
 
 class GeminiSentimentModel(SentimentModel):
-    def __init__(self):
+    def __init__(self, prompt_config: Optional[Dict[str, Any]] = None):
         self.name = "gemini"
         self.model = cfg["gemini"]["model"]
         self.timeout = cfg["gemini"].get("timeout_seconds", 10)
         self.api_key = get_env("GEMINI_API_KEY", "")
+        if prompt_config:
+            self.set_prompt_config(prompt_config)
 
     def classify(self, text: str) -> Dict[str, Any]:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+        
+        # Use externalized prompts
+        system_prompt = self.get_system_prompt()
+        user_message = self.get_user_message(text)
         
         payload = {
             "contents": [
                 {
                     "parts": [
-                        {"text": GEMINI_PROMPT},
-                        {"text": text}
+                        {"text": system_prompt},
+                        {"text": user_message}
                     ]
                 }
             ]

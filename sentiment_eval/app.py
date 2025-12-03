@@ -1,10 +1,20 @@
 import streamlit as st
 from pathlib import Path
 import pandas as pd
+import sys
 
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
 CORRECTED_PATH = RESULTS_DIR / "corrected_results.csv"
+
+# Add src to path for imports
+sys.path.insert(0, str(BASE_DIR / "src"))
+
+try:
+    from config import list_prompt_strategies, load_prompts
+    PROMPTS_AVAILABLE = True
+except ImportError:
+    PROMPTS_AVAILABLE = False
 
 
 def load_results(path: Path) -> pd.DataFrame:
@@ -35,6 +45,21 @@ def discover_result_files() -> list[Path]:
 st.title("Sentiment Labeling Tool")
 
 result_files = discover_result_files()
+
+# Prompt Strategy Info Section
+if PROMPTS_AVAILABLE:
+    st.sidebar.header("🎯 Prompt Strategies")
+    try:
+        strategies = list_prompt_strategies()
+        st.sidebar.caption(f"**{len(strategies)}** strategies available")
+        with st.sidebar.expander("View Strategies"):
+            for key, name in strategies.items():
+                st.markdown(f"- **{name}**")
+        st.sidebar.info("Use **🚀 Run Batch** page to analyze with different strategies")
+    except Exception:
+        pass
+
+st.sidebar.divider()
 st.sidebar.header("Results Source")
 
 if not result_files:

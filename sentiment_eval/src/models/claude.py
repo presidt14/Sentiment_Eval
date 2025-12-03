@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import requests
 import json
 
@@ -7,28 +7,15 @@ from .base import SentimentModel
 
 cfg = load_settings()
 
-SYSTEM_PROMPT = """
-You are a sentiment classifier for social-media posts in the i-gaming and regulatory compliance domain.
-
-Classify sentiment as:
-- positive
-- neutral
-- negative
-
-Return ONLY strict JSON with keys:
-{
-  "sentiment": "positive|neutral|negative",
-  "confidence": 0-1 float,
-  "reason": "Short explanation"
-}
-"""
 
 class ClaudeSentimentModel(SentimentModel):
-    def __init__(self):
+    def __init__(self, prompt_config: Optional[Dict[str, Any]] = None):
         self.name = "claude"
         self.model = cfg["claude"]["model"]
         self.timeout = cfg["claude"].get("timeout_seconds", 10)
         self.api_key = get_env("ANTHROPIC_API_KEY", "")
+        if prompt_config:
+            self.set_prompt_config(prompt_config)
 
     def classify(self, text: str) -> Dict[str, Any]:
         url = "https://api.anthropic.com/v1/messages"
@@ -39,12 +26,16 @@ class ClaudeSentimentModel(SentimentModel):
             "content-type": "application/json",
         }
         
+        # Use externalized prompts
+        system_prompt = self.get_system_prompt()
+        user_message = self.get_user_message(text)
+        
         payload = {
             "model": self.model,
             "max_tokens": 256,
-            "system": SYSTEM_PROMPT,
+            "system": system_prompt,
             "messages": [
-                {"role": "user", "content": text}
+                {"role": "user", "content": user_message}
             ],
         }
         

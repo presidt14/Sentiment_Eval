@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import requests
 import json
 
@@ -7,12 +7,15 @@ from .base import SentimentModel
 
 cfg = load_settings()
 
+
 class GemmaSentimentModel(SentimentModel):
-    def __init__(self):
+    def __init__(self, prompt_config: Optional[Dict[str, Any]] = None):
         self.name = "gemma"
         self.url = cfg["gemma"]["gemma url"]
         self.timeout = cfg["gemma"].get("timeout_seconds", 10)
         self.token = get_env("GEMMA_API_TOKEN", "")
+        if prompt_config:
+            self.set_prompt_config(prompt_config)
 
     def classify(self, text: str) -> Dict[str, Any]:
         # Expect internal Gemma endpoint to return:
@@ -27,9 +30,14 @@ class GemmaSentimentModel(SentimentModel):
             "Content-Type": "application/json",
         }
         
+        # Use externalized prompts - pass to internal endpoint
+        system_prompt = self.get_system_prompt()
+        user_message = self.get_user_message(text)
+        
         payload = {
-            "text": text,
+            "text": user_message,
             "task": "sentiment",
+            "system_prompt": system_prompt,  # Internal endpoint can use this
         }
         
         try:
