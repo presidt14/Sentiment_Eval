@@ -1,11 +1,11 @@
 from typing import Any, Dict, List, Optional
 
-from .gemma import GemmaSentimentModel
-from .claude import ClaudeSentimentModel
-from .gemini import GeminiSentimentModel
-from .deepseek import DeepseekSentimentModel
-from .mock import MockSentimentModel
 from .base import SentimentModel
+from .claude import ClaudeSentimentModel
+from .deepseek import DeepseekSentimentModel
+from .gemini import GeminiSentimentModel
+from .gemma import GemmaSentimentModel
+from .mock import MockSentimentModel
 
 
 def get_active_models(
@@ -14,12 +14,12 @@ def get_active_models(
 ) -> List[SentimentModel]:
     """
     Get list of active sentiment models based on configuration.
-    
+
     Args:
         cfg: Settings configuration. If None, loads from default settings.
         prompt_config: Optional prompt configuration to apply to all models.
                       Should contain 'system' and 'user_template' keys.
-    
+
     Returns:
         List of instantiated SentimentModel instances.
     """
@@ -41,7 +41,9 @@ def get_active_models(
         instances.append(DeepseekSentimentModel(prompt_config=prompt_config))
     if "mock" in active:
         mock_cfg = cfg.get("mock", {})
-        instances.append(MockSentimentModel(seed=mock_cfg.get("seed"), prompt_config=prompt_config))
+        instances.append(
+            MockSentimentModel(seed=mock_cfg.get("seed"), prompt_config=prompt_config)
+        )
 
     return instances
 
@@ -52,15 +54,15 @@ def get_active_models_with_strategy(
 ) -> List[SentimentModel]:
     """
     Get list of active sentiment models with a specific prompt strategy.
-    
+
     Args:
         strategy_name: Name of the prompt strategy from prompts.yaml.
         cfg: Settings configuration. If None, loads from default settings.
-    
+
     Returns:
         List of instantiated SentimentModel instances with the strategy applied.
     """
     from ..config import get_prompt_strategy
-    
+
     prompt_config = get_prompt_strategy(strategy_name)
     return get_active_models(cfg=cfg, prompt_config=prompt_config)

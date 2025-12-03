@@ -4,15 +4,42 @@ from typing import Any, Dict, Optional
 
 from .base import SentimentModel
 
-_POSITIVE_KEYWORDS = ["love", "best", "great", "good", "amazing", "excellent", "fantastic"]
-_NEGATIVE_KEYWORDS = ["hate", "awful", "bad", "worst", "terrible", "slow", "down", "poor"]
+_POSITIVE_KEYWORDS = [
+    "love",
+    "best",
+    "great",
+    "good",
+    "amazing",
+    "excellent",
+    "fantastic",
+]
+_NEGATIVE_KEYWORDS = [
+    "hate",
+    "awful",
+    "bad",
+    "worst",
+    "terrible",
+    "slow",
+    "down",
+    "poor",
+]
 
 # Sarcasm-aware keywords for sarcasm_detector strategy
-_SARCASM_INDICATORS = ["oh great", "just great", "wonderful", "fantastic", "yeah right", "sure", "obviously"]
+_SARCASM_INDICATORS = [
+    "oh great",
+    "just great",
+    "wonderful",
+    "fantastic",
+    "yeah right",
+    "sure",
+    "obviously",
+]
 
 
 class MockSentimentModel(SentimentModel):
-    def __init__(self, seed: Optional[int] = None, prompt_config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(
+        self, seed: Optional[int] = None, prompt_config: Optional[Dict[str, Any]] = None
+    ) -> None:
         self.name = "mock"
         self._random = random.Random()
         if seed is not None:

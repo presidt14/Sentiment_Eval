@@ -1,6 +1,7 @@
-from typing import Dict, Any, Optional
-import requests
 import json
+from typing import Any, Dict, Optional
+
+import requests
 
 from ..config import get_env, load_settings
 from .base import SentimentModel
@@ -19,22 +20,15 @@ class GeminiSentimentModel(SentimentModel):
 
     def classify(self, text: str) -> Dict[str, Any]:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
-        
+
         # Use externalized prompts
         system_prompt = self.get_system_prompt()
         user_message = self.get_user_message(text)
-        
+
         payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": system_prompt},
-                        {"text": user_message}
-                    ]
-                }
-            ]
+            "contents": [{"parts": [{"text": system_prompt}, {"text": user_message}]}]
         }
-        
+
         try:
             resp = requests.post(url, json=payload, timeout=self.timeout)
             resp.raise_for_status()

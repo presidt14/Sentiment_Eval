@@ -1,7 +1,8 @@
-import streamlit as st
-from pathlib import Path
-import pandas as pd
 import sys
+from pathlib import Path
+
+import pandas as pd
+import streamlit as st
 
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
@@ -12,6 +13,7 @@ sys.path.insert(0, str(BASE_DIR / "src"))
 
 try:
     from config import list_prompt_strategies, load_prompts
+
     PROMPTS_AVAILABLE = True
 except ImportError:
     PROMPTS_AVAILABLE = False
@@ -55,7 +57,9 @@ if PROMPTS_AVAILABLE:
         with st.sidebar.expander("View Strategies"):
             for key, name in strategies.items():
                 st.markdown(f"- **{name}**")
-        st.sidebar.info("Use **🚀 Run Batch** page to analyze with different strategies")
+        st.sidebar.info(
+            "Use **🚀 Run Batch** page to analyze with different strategies"
+        )
     except Exception:
         pass
 
@@ -68,7 +72,9 @@ if not result_files:
     st.stop()
 
 file_options = {f.name: f for f in result_files}
-selected_label = st.sidebar.selectbox("Available result files", list(file_options.keys()))
+selected_label = st.sidebar.selectbox(
+    "Available result files", list(file_options.keys())
+)
 selected_path = file_options[selected_label]
 st.sidebar.caption(f"Loading **{selected_label}**")
 
@@ -78,7 +84,9 @@ if state_key not in st.session_state:
     st.session_state[state_key] = load_results(selected_path)
 
 df_full = st.session_state[state_key]
-sentiment_cols = [c for c in df_full.columns if c.endswith("_sentiment") and c != "human_sentiment"]
+sentiment_cols = [
+    c for c in df_full.columns if c.endswith("_sentiment") and c != "human_sentiment"
+]
 
 # Compute verification metrics
 verified_count = (df_full["human_sentiment"].astype(str).str.strip() != "").sum()
@@ -114,19 +122,25 @@ else:
     # Initialize pagination state
     if "current_index" not in st.session_state:
         st.session_state.current_index = 0
-    
+
     # Clamp current_index to valid range for filtered df
     max_idx = len(df) - 1
-    st.session_state.current_index = max(0, min(st.session_state.current_index, max_idx))
-    
+    st.session_state.current_index = max(
+        0, min(st.session_state.current_index, max_idx)
+    )
+
     # Navigation UI
     nav_col1, nav_col2, nav_col3 = st.columns([1, 2, 1])
-    
+
     with nav_col1:
-        if st.button("⬅️ Previous", use_container_width=True, disabled=st.session_state.current_index == 0):
+        if st.button(
+            "⬅️ Previous",
+            use_container_width=True,
+            disabled=st.session_state.current_index == 0,
+        ):
             st.session_state.current_index -= 1
             st.rerun()
-    
+
     with nav_col2:
         # Number input for direct jump (1-indexed for user-friendliness)
         new_row = st.number_input(
@@ -135,21 +149,25 @@ else:
             max_value=len(df),
             value=st.session_state.current_index + 1,
             step=1,
-            key="row_number_input"
+            key="row_number_input",
         )
         # Update index if user changed the number input
         if new_row - 1 != st.session_state.current_index:
             st.session_state.current_index = new_row - 1
             st.rerun()
-    
+
     with nav_col3:
-        if st.button("Next ➡️", use_container_width=True, disabled=st.session_state.current_index >= max_idx):
+        if st.button(
+            "Next ➡️",
+            use_container_width=True,
+            disabled=st.session_state.current_index >= max_idx,
+        ):
             st.session_state.current_index += 1
             st.rerun()
-    
+
     # Progress indicator
     st.markdown(f"**Post {st.session_state.current_index + 1} of {len(df)}**")
-    
+
     # Get current row from filtered dataframe
     row_index = df.index[st.session_state.current_index]
     row = df.loc[row_index]
@@ -171,23 +189,27 @@ else:
         confidence = row.get(f"{model_name}_confidence", "N/A")
         reason = row.get(f"{model_name}_reason", "No reason provided")
 
-        st.markdown(f"**{model_name.upper()}** — {colored_sentiment} (Conf: {confidence})")
+        st.markdown(
+            f"**{model_name.upper()}** — {colored_sentiment} (Conf: {confidence})"
+        )
         st.caption(f"_{reason}_")
 
     # Human correction controls
     st.subheader("Human Correction")
     st.caption("Click a button to label this post (auto-advances to next):")
-    
+
     col1, col2, col3, col4 = st.columns(4)
-    
+
     def advance_to_next():
         """Auto-advance to next row after verification, if possible."""
         if st.session_state.current_index < len(df) - 1:
             st.session_state.current_index += 1
-    
+
     with col1:
         if st.button("✓ Correct", key=f"correct_{row_index}"):
-            first_model_sentiment = row[sentiment_cols[0]] if sentiment_cols else "neutral"
+            first_model_sentiment = (
+                row[sentiment_cols[0]] if sentiment_cols else "neutral"
+            )
             df_full.at[row_index, "human_sentiment"] = first_model_sentiment
             advance_to_next()
             st.rerun()

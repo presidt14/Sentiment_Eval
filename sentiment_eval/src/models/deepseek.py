@@ -1,6 +1,7 @@
-from typing import Dict, Any, Optional
-import requests
 import json
+from typing import Any, Dict, Optional
+
+import requests
 
 from ..config import get_env, load_settings
 from .base import SentimentModel
@@ -19,28 +20,30 @@ class DeepseekSentimentModel(SentimentModel):
 
     def classify(self, text: str) -> Dict[str, Any]:
         url = "https://api.deepseek.com/v1/chat/completions"
-        
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-        
+
         # Use externalized prompts
         system_prompt = self.get_system_prompt()
         user_message = self.get_user_message(text)
-        
+
         payload = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
+                {"role": "user", "content": user_message},
             ],
             "response_format": {"type": "json_object"},
             "max_tokens": 256,
         }
-        
+
         try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
+            resp = requests.post(
+                url, json=payload, headers=headers, timeout=self.timeout
+            )
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"]
             return json.loads(content)

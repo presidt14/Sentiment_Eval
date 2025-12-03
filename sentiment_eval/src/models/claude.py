@@ -1,6 +1,7 @@
-from typing import Dict, Any, Optional
-import requests
 import json
+from typing import Any, Dict, Optional
+
+import requests
 
 from ..config import get_env, load_settings
 from .base import SentimentModel
@@ -19,28 +20,28 @@ class ClaudeSentimentModel(SentimentModel):
 
     def classify(self, text: str) -> Dict[str, Any]:
         url = "https://api.anthropic.com/v1/messages"
-        
+
         headers = {
             "x-api-key": self.api_key,
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
-        
+
         # Use externalized prompts
         system_prompt = self.get_system_prompt()
         user_message = self.get_user_message(text)
-        
+
         payload = {
             "model": self.model,
             "max_tokens": 256,
             "system": system_prompt,
-            "messages": [
-                {"role": "user", "content": user_message}
-            ],
+            "messages": [{"role": "user", "content": user_message}],
         }
-        
+
         try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
+            resp = requests.post(
+                url, json=payload, headers=headers, timeout=self.timeout
+            )
             resp.raise_for_status()
             data = resp.json()
             # Expect content block to contain JSON text

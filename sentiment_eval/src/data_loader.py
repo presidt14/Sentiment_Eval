@@ -7,19 +7,20 @@ Handles loading of various data formats with support for:
 - Nested JSON normalization
 """
 
-import pandas as pd
-from pathlib import Path
 import json
+from pathlib import Path
 from typing import Optional
+
+import pandas as pd
 
 
 def _normalize_nested_json(data: list | dict) -> pd.DataFrame:
     """
     Attempt to normalize nested JSON data into a flat DataFrame.
-    
+
     Args:
         data: JSON data (list of dicts or nested dict)
-        
+
     Returns:
         Flattened DataFrame
     """
@@ -41,23 +42,23 @@ def load_posts(
     fill_missing: bool = True,
     drop_duplicate_ids: bool = False,
     id_column: Optional[str] = None,
-    text_column: Optional[str] = None
+    text_column: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Load posts from a file with optional data cleaning.
-    
+
     Args:
         path: Path to the data file (CSV, JSON, or JSONL)
         fill_missing: Whether to fill missing text values with ""
         drop_duplicate_ids: Whether to drop duplicate IDs
         id_column: Column name for IDs (for deduplication)
         text_column: Column name for text (for missing value handling)
-        
+
     Returns:
         Loaded and optionally cleaned DataFrame
     """
     path = Path(path)
-    
+
     if path.suffix.lower() == ".csv":
         df = pd.read_csv(path)
     elif path.suffix.lower() == ".json":
@@ -65,14 +66,14 @@ def load_posts(
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            
+
             # Check if it's a simple list of flat dicts
             if isinstance(data, list) and len(data) > 0:
                 if isinstance(data[0], dict):
                     # Check if any values are nested
                     has_nested = any(
-                        isinstance(v, (dict, list)) 
-                        for item in data[:5] 
+                        isinstance(v, (dict, list))
+                        for item in data[:5]
                         for v in item.values()
                     )
                     if has_nested:
@@ -92,7 +93,7 @@ def load_posts(
         df = pd.read_json(path, lines=True)
     else:
         raise ValueError(f"Unsupported file type: {path.suffix}")
-    
+
     # Handle missing values
     if fill_missing:
         # Fill missing values in text column if specified
@@ -102,7 +103,7 @@ def load_posts(
         for col in ["text", "body", "content", "message"]:
             if col in df.columns:
                 df[col] = df[col].fillna("")
-    
+
     # Handle duplicate IDs
     if drop_duplicate_ids and id_column and id_column in df.columns:
         original_len = len(df)
@@ -110,7 +111,7 @@ def load_posts(
         dropped = original_len - len(df)
         if dropped > 0:
             print(f"Dropped {dropped} duplicate IDs from column '{id_column}'")
-    
+
     return df
 
 
@@ -122,10 +123,10 @@ def load_labels(path: str | Path) -> pd.DataFrame:
 def load_staging_batch(staging_dir: Path) -> Optional[pd.DataFrame]:
     """
     Load the current staging batch if it exists.
-    
+
     Args:
         staging_dir: Path to the staging directory
-        
+
     Returns:
         DataFrame if staging file exists, None otherwise
     """

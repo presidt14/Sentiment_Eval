@@ -1,6 +1,7 @@
-from typing import Dict, Any, Optional
-import requests
 import json
+from typing import Any, Dict, Optional
+
+import requests
 
 from ..config import get_env, load_settings
 from .base import SentimentModel
@@ -24,24 +25,26 @@ class GemmaSentimentModel(SentimentModel):
         #   "confidence": 0.93,
         #   "reason": "short explanation"
         # }
-        
+
         headers = {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
-        
+
         # Use externalized prompts - pass to internal endpoint
         system_prompt = self.get_system_prompt()
         user_message = self.get_user_message(text)
-        
+
         payload = {
             "text": user_message,
             "task": "sentiment",
             "system_prompt": system_prompt,  # Internal endpoint can use this
         }
-        
+
         try:
-            resp = requests.post(self.url, json=payload, headers=headers, timeout=self.timeout)
+            resp = requests.post(
+                self.url, json=payload, headers=headers, timeout=self.timeout
+            )
             resp.raise_for_status()
             return resp.json()
         except requests.exceptions.RequestException as e:

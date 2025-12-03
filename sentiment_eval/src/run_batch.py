@@ -1,12 +1,13 @@
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable
 import asyncio
 import time
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
 import pandas as pd
 import tqdm
 import tqdm.asyncio
 
-from .config import load_settings, get_prompt_strategy
+from .config import get_prompt_strategy, load_settings
 from .data_loader import load_posts, load_staging_batch
 from .models import get_active_models, get_active_models_with_strategy
 from .models.base import SentimentModel
@@ -33,24 +34,26 @@ async def _classify_single_row(
     """
     async with semaphore:
         row_res = dict(row_data)
-        
+
         # Run all models concurrently for this row
         tasks = []
         for m in models:
             tasks.append(_classify_with_model(m, text))
-        
+
         model_results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         for m, result in zip(models, model_results):
             if isinstance(result, Exception):
-                row_res.update({
-                    f"{m.name}_sentiment": "neutral",
-                    f"{m.name}_confidence": 0.0,
-                    f"{m.name}_reason": f"Error: {result.__class__.__name__}. Check API key or endpoint.",
-                })
+                row_res.update(
+                    {
+                        f"{m.name}_sentiment": "neutral",
+                        f"{m.name}_confidence": 0.0,
+                        f"{m.name}_reason": f"Error: {result.__class__.__name__}. Check API key or endpoint.",
+                    }
+                )
             else:
                 row_res.update(ensure_result_dict(m.name, result))
-        
+
         return row_id, row_res
 
 
@@ -69,7 +72,7 @@ async def process_batch_async(
 ) -> Dict[Any, Dict[str, Any]]:
     """
     Process a batch of posts asynchronously with controlled concurrency.
-    
+
     Args:
         df: DataFrame with posts to analyze.
         models: List of sentiment models to use.
@@ -77,13 +80,13 @@ async def process_batch_async(
         id_column: Column name containing unique IDs.
         concurrency: Maximum concurrent requests.
         progress_callback: Optional callback(completed, total) for progress updates.
-        
+
     Returns:
         Dictionary mapping row IDs to result dictionaries.
     """
     semaphore = asyncio.Semaphore(concurrency)
     results: Dict[Any, Dict[str, Any]] = {}
-    
+
     # Create tasks for all rows
     tasks = []
     for idx, row in df.iterrows():
@@ -91,20 +94,20 @@ async def process_batch_async(
         row_id = row[id_column]
         row_data = dict(row)
         tasks.append(_classify_single_row(row_id, text, row_data, models, semaphore))
-    
+
     # Process with async progress bar using tqdm.gather
     total = len(tasks)
     completed = 0
-    
+
     # Use tqdm.asyncio.tqdm.gather for proper async progress tracking
     all_results = await tqdm.asyncio.tqdm.gather(*tasks, desc="Processing", total=total)
-    
+
     for row_id, row_res in all_results:
         results[row_id] = row_res
         completed += 1
         if progress_callback:
             progress_callback(completed, total)
-    
+
     return results
 
 
@@ -121,7 +124,7 @@ def run_batch(
 ) -> pd.DataFrame:
     """
     Run batch sentiment analysis on input data.
-    
+
     Args:
         input_path: Path to input file. If None and use_staging=True, uses staging file.
         output_path: Path to save results. Auto-generated if None.
@@ -132,7 +135,7 @@ def run_batch(
         concurrency: Maximum concurrent requests for async mode.
         use_async: If True, use async processing. If False, use sync processing.
         prompt_strategy: Name of prompt strategy from prompts.yaml. If None, uses default.
-        
+
     Returns:
         DataFrame with sentiment analysis results.
     """
@@ -145,9 +148,9 @@ def run_batch(
             # Fall back to sample data
             input_path = BASE_DIR / "data" / "samples" / "posts_sample.csv"
             print(f"No staging file found, using sample: {input_path}")
-    
+
     input_path = Path(input_path)
-    
+
     if output_path is None:
         output_path = BASE_DIR / "results" / f"results_{input_path.stem}.csv"
     else:
@@ -155,7 +158,7 @@ def run_batch(
 
     df = load_posts(input_path)
     cfg = load_settings(config_path) if config_path else load_settings()
-    
+
     # Get models with prompt strategy if specified
     if prompt_strategy:
         print(f"Using prompt strategy: {prompt_strategy}")
@@ -164,9 +167,9 @@ def run_batch(
         models = get_active_models(cfg)
 
     print(f"Loaded {len(df)} posts. Active models: {[m.name for m in models]}")
-    
+
     start_time = time.time()
-    
+
     if use_async:
         print(f"Using async processing with concurrency={concurrency}")
         results = asyncio.run(
@@ -175,12 +178,12 @@ def run_batch(
     else:
         print("Using synchronous processing")
         results = _run_batch_sync(df, models, text_column, id_column)
-    
+
     elapsed = time.time() - start_time
     print(f"Processing completed in {elapsed:.2f}s")
 
     res_df = pd.DataFrame.from_dict(results, orient="index")
-    
+
     # Clean up columns for export
     for k in res_df.columns:
         if k in [text_column, id_column]:
@@ -203,31 +206,35 @@ def _run_batch_sync(
     Synchronous batch processing (legacy fallback).
     """
     results: Dict[Any, Dict[str, Any]] = {}
-    
+
     for idx, row in tqdm.tqdm(df.iterrows(), total=len(df)):
         text = str(row[text_column])
         row_id = row[id_column]
         row_res = dict(row)
-        
+
         for m in models:
             try:
                 raw_res = m.classify(text)
                 row_res.update(ensure_result_dict(m.name, raw_res))
             except Exception as e:
                 print(f"\nError with model {m.name} on row {idx} ({e})")
-                row_res.update({
-                    f"{m.name}_sentiment": "neutral",
-                    f"{m.name}_confidence": 0.0,
-                    f"{m.name}_reason": f"Error: {e.__class__.__name__}. Check API key or endpoint.",
-                })
-        
+                row_res.update(
+                    {
+                        f"{m.name}_sentiment": "neutral",
+                        f"{m.name}_confidence": 0.0,
+                        f"{m.name}_reason": f"Error: {e.__class__.__name__}. Check API key or endpoint.",
+                    }
+                )
+
         results[row_id] = row_res
-    
+
     return results
+
 
 if __name__ == "__main__":
     # Simple CLI entry point
     import argparse
+
     parser = argparse.ArgumentParser(description="Run multi-model sentiment batch.")
     parser.add_argument(
         "--input",
@@ -271,8 +278,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     run_batch(
-        args.input, 
-        args.output, 
+        args.input,
+        args.output,
         config_path=args.config,
         use_staging=not args.no_staging,
         concurrency=args.concurrency,
