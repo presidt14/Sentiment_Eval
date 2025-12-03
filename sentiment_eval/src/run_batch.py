@@ -4,19 +4,47 @@ import pandas as pd
 import tqdm
 
 from .config import load_settings
-from .data_loader import load_posts
+from .data_loader import load_posts, load_staging_batch
 from .models import get_active_models
 from .utils import ensure_result_dict
 
 BASE_DIR = Path(__file__).resolve().parents[1]
+STAGING_DIR = BASE_DIR / "data" / "staging"
+DEFAULT_STAGING_FILE = STAGING_DIR / "current_batch.csv"
+
 
 def run_batch(
-    input_path: str | Path,
+    input_path: str | Path | None = None,
     output_path: str | Path | None = None,
     text_column: str = "text",
     id_column: str = "post_id",
     config_path: str | Path | None = None,
+    use_staging: bool = True,
 ) -> pd.DataFrame:
+    """
+    Run batch sentiment analysis on input data.
+    
+    Args:
+        input_path: Path to input file. If None and use_staging=True, uses staging file.
+        output_path: Path to save results. Auto-generated if None.
+        text_column: Column name containing text to analyze.
+        id_column: Column name containing unique IDs.
+        config_path: Path to configuration file.
+        use_staging: If True and input_path is None, use the staging file.
+        
+    Returns:
+        DataFrame with sentiment analysis results.
+    """
+    # Determine input path
+    if input_path is None:
+        if use_staging and DEFAULT_STAGING_FILE.exists():
+            input_path = DEFAULT_STAGING_FILE
+            print(f"Using staging file: {input_path}")
+        else:
+            # Fall back to sample data
+            input_path = BASE_DIR / "data" / "samples" / "posts_sample.csv"
+            print(f"No staging file found, using sample: {input_path}")
+    
     input_path = Path(input_path)
     
     if output_path is None:
@@ -72,8 +100,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input",
         type=str,
-        default=str(BASE_DIR / "data" / "samples" / "posts_sample.csv"),
-        help="Path to CSV or JSON/JSONL file with posts.",
+        default=None,
+        help="Path to CSV or JSON/JSONL file with posts. If not provided, uses staging file.",
     )
     parser.add_argument(
         "--output",
@@ -87,5 +115,15 @@ if __name__ == "__main__":
         default=None,
         help="Optional path to a configuration YAML file.",
     )
+    parser.add_argument(
+        "--no-staging",
+        action="store_true",
+        help="Don't use staging file even if input is not provided.",
+    )
     args = parser.parse_args()
-    run_batch(args.input, args.output, config_path=args.config)
+    run_batch(
+        args.input, 
+        args.output, 
+        config_path=args.config,
+        use_staging=not args.no_staging
+    )

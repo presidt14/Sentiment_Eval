@@ -1,0 +1,72 @@
+[
+  {
+    "tracking_code": "TRK-001",
+    "customer_feedback": "Absolutely love this product! Best purchase I've made all year.",
+    "customer_name": "John Doe",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "rating": 5
+  },
+  {
+    "tracking_code": "TRK-002",
+    "customer_feedback": "Terrible experience. The product broke after one day.",
+    "customer_name": "Jane Smith",
+    "timestamp": "2024-01-15T11:45:00Z",
+    "rating": 1
+  },
+  {
+    "tracking_code": "TRK-003",
+    "customer_feedback": "It's okay, nothing special. Does what it's supposed to do.",
+    "customer_name": "Bob Johnson",
+    "timestamp": "2024-01-15T14:20:00Z",
+    "rating": 3
+  },
+  {
+    "tracking_code": "TRK-004",
+    "customer_feedback": null,
+    "customer_name": "Alice Brown",
+    "timestamp": "2024-01-16T09:00:00Z",
+    "rating": 4
+  },
+  {
+    "tracking_code": "TRK-005",
+    "customer_feedback": "Amazing quality and fast shipping! Will definitely buy again.",
+    "customer_name": "Charlie Wilson",
+    "timestamp": "2024-01-16T10:15:00Z",
+    "rating": 5
+  },
+  {
+    "tracking_code": "TRK-001",
+    "customer_feedback": "Duplicate entry - should be removed",
+    "customer_name": "John Doe",
+    "timestamp": "2024-01-16T11:00:00Z",
+    "rating": 5
+  },
+  {
+    "tracking_code": "TRK-006",
+    "customer_feedback": "Not worth the money. Very disappointed with the quality.",
+    "customer_name": "Diana Lee",
+    "timestamp": "2024-01-16T13:30:00Z",
+    "rating": 2
+  },
+  {
+    "tracking_code": "TRK-007",
+    "customer_feedback": "",
+    "customer_name": "Eve Martinez",
+    "timestamp": "2024-01-16T15:45:00Z",
+    "rating": 3
+  },
+  {
+    "tracking_code": "TRK-008",
+    "customer_feedback": "Great customer service! They resolved my issue quickly.",
+    "customer_name": "Frank Garcia",
+    "timestamp": "2024-01-17T08:00:00Z",
+    "rating": 4
+  },
+  {
+    "tracking_code": "TRK-009",
+    "customer_feedback": "The product exceeded my expectations. Highly recommend!",
+    "customer_name": "Grace Kim",
+    "timestamp": "2024-01-17T09:30:00Z",
+    "rating": 5
+  }
+]

@@ -1,0 +1,42 @@
+{
+  "api_version": "1.0",
+  "generated_at": "2024-01-17T12:00:00Z",
+  "records": [
+    {
+      "record_id": "REC-001",
+      "user": {
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      "feedback_content": "This is a fantastic product! I love everything about it.",
+      "metadata": {
+        "source": "web",
+        "device": "desktop"
+      }
+    },
+    {
+      "record_id": "REC-002",
+      "user": {
+        "name": "Jane Smith",
+        "email": "jane@example.com"
+      },
+      "feedback_content": "Worst purchase ever. Complete waste of money.",
+      "metadata": {
+        "source": "mobile",
+        "device": "ios"
+      }
+    },
+    {
+      "record_id": "REC-003",
+      "user": {
+        "name": "Bob Wilson",
+        "email": "bob@example.com"
+      },
+      "feedback_content": "Average product. Nothing to write home about.",
+      "metadata": {
+        "source": "web",
+        "device": "tablet"
+      }
+    }
+  ]
+}
