@@ -62,3 +62,9 @@ class GeminiSentimentModel(SentimentModel):
                 "confidence": 0.0,
                 "reason": f"API Error (Gemini): Invalid response format. {e.__class__.__name__}.",
             }
+
+    async def aclassify(self, text: str) -> Dict[str, Any]:
+        """
+        Async classification using thread pool executor for sync HTTP call.
+        """
+        return await self._run_sync_in_executor(text)

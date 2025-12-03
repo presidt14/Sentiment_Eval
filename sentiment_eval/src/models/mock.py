@@ -1,3 +1,4 @@
+import asyncio
 import random
 from typing import Any, Dict, Optional
 
@@ -41,3 +42,10 @@ class MockSentimentModel(SentimentModel):
             "confidence": round(self._random.uniform(0.5, 0.7), 2),
             "reason": "Heuristic: no strong sentiment keywords detected",
         }
+
+    async def aclassify(self, text: str) -> Dict[str, Any]:
+        """
+        Async classification with simulated network latency.
+        """
+        await asyncio.sleep(0.1)  # Simulate network lag
+        return self.classify(text)

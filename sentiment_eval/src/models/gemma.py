@@ -49,3 +49,9 @@ class GemmaSentimentModel(SentimentModel):
                 "confidence": 0.0,
                 "reason": "API Error (Gemma): Invalid JSON response.",
             }
+
+    async def aclassify(self, text: str) -> Dict[str, Any]:
+        """
+        Async classification using thread pool executor for sync HTTP call.
+        """
+        return await self._run_sync_in_executor(text)
