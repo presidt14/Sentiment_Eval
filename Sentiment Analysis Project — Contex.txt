@@ -1,0 +1,358 @@
+Sentiment Analysis Project — Context Summary
+Foundation Notes for a Full PRD
+
+Last updated: December 2025
+
+1. Business Problem & Objective
+Core Problem
+
+Rightlander monitors social media posts for compliance infractions and brand-related sentiment.
+Current third-party sentiment vendors frequently misclassify low-information, low-signal posts as “negative”, generating noise and undermining trust.
+
+Business Objective
+
+Produce high-precision sentiment classification that prioritises:
+
+Accuracy over recall.
+
+Reduction of false negatives for meaningful negative posts.
+
+Reduction of false positives for low-information neutral posts.
+
+This sentiment engine must become a component in:
+
+Rightlander Trackback
+
+Rightlander Intel
+
+The Actions Dashboard
+
+The Compliance Risk Assessor (indirectly)
+
+2. Technical Context
+2.1 Internal Model
+
+The business runs an internal Gemma LLM on AWS, which:
+
+Is used for general compliance classification.
+
+Requires controlled, high-quality datasets for fine-tuning or LoRA approaches.
+
+Is a candidate for sentiment modelling if results outperform vendor.
+
+Multiple stakeholders believe Gemma might outperform current suppliers for our specific domain.
+
+2.2 External Model Options
+
+The project may incorporate optional APIs:
+
+DeepSeek R1 / DeepSeek V3
+
+Claude 3.5 / 4.1
+
+Gemini 2.x
+
+OpenAI GPT-5.1 / o1-mini
+
+Nebius TokenFactory (DeepSeek-GGUF via API)
+
+2.3 Internal Systems
+
+Messages flow from ingestion → classification → actions.
+
+Sentiment must attach to the same object as compliance flags.
+
+Sentiment scores will be visible in customer dashboards.
+
+Output must be:
+
+Transparent (why did a model classify this way?)
+
+Auditable (especially for regulated gaming affiliates)
+
+2.4 User Roles
+
+Trevor: design, coordination, experiments.
+
+Adam: internal model owner, AWS engineering.
+
+Affiliates / Compliance Managers: consumers of outputs.
+
+Backend Dev: integration of model endpoints.
+
+3. Goals of the New Sentiment Engine
+Primary Goals
+
+Accurately classify sentiment of social posts about brands.
+
+Detect “meaningful negative sentiment”, not just generic negativity.
+
+Suppress false positives caused by:
+
+Sarcasm
+
+Humour
+
+Ellipsis-only posts
+
+Emoji-only posts
+
+Minimal context
+
+Contextual Awareness
+
+Understand tone in short-form, slang-heavy posts.
+
+Infer missing context where appropriate.
+
+Distinguish sentiment towards brand vs towards something else.
+
+Secondary Goals
+
+Provide explanations for each classification (“contextual rationale”).
+
+Provide a confidence score to guide downstream actions.
+
+Provide structured metadata:
+
+sentiment_label: {positive, neutral, negative, uncertain}
+
+negative_type: {customer dissatisfaction, scam accusation, regulatory criticism, general negativity, unrelated}
+
+rationale: free text
+
+span of text that triggered negative flag
+
+4. Experimental Programme (Agreed Internally)
+
+Based on discussions with Adam:
+
+Experiment Set A — Baseline
+
+Evaluate current supplier output vs. ground-truth sample set.
+
+Measure precision / recall / F1 for negative sentiment.
+
+Identify patterns of misclassification.
+
+Experiment Set B — Zero-shot / Few-shot
+
+Apply AWS Gemma to the same sample set using structured prompts.
+
+Try variants:
+
+Simple raw sentiment
+
+Brand-targeted sentiment
+
+Sentiment ± explanation
+
+Compare with vendor baseline.
+
+Experiment Set C — Fine-tuning / LoRA
+
+Create domain-specific labelled dataset.
+
+Fine-tune Gemma or a 7B/14B open-source model.
+
+Measure improvement over zero-shot.
+
+Experiment Set D — Multi-model Hybrid
+
+Evaluate commercial APIs for difficult edge cases:
+
+Sarcasm
+
+Multi-brand references
+
+Hidden negativity
+
+Build a potential router:
+
+Cheap / fast: internal Gemma
+
+Hard cases: DeepSeek or Claude via API
+
+Compare latency, cost, accuracy.
+
+Experiment Set E — Production Simulation
+
+Test streaming ingestion of live social posts.
+
+Evaluate runtime latency thresholds.
+
+Check for model drift.
+
+Validate under load.
+
+5. Data Requirements
+5.1 Required Training Data
+
+Real historical social posts (anonymised).
+
+Labels: sentiment, brand-target relevance, rationale.
+
+Balanced across:
+
+Sectors: casino, sportsbook, bingo, lottery, etc.
+
+Post types: X/Twitter, forums, blogs, comments.
+
+Style: longform, slang, emojis, sarcasm.
+
+5.2 Labelling Standards
+
+Each item must include:
+
+Sentiment label
+
+Is sentiment about the brand? (yes/no)
+
+Severity of negativity (low/medium/high)
+
+Nature of negativity (service issue, complaint, etc.)
+
+Rationale paragraph
+
+Suggested action (optional)
+
+This forms the foundation for fine-tuning and evaluation.
+
+6. System Architecture Expectations
+6.1 Inference Layer
+
+One API route for sentiment classification.
+
+Takes raw text + metadata (brand, URL, scraped context).
+
+Returns structured JSON.
+
+6.2 Caching & Cost Control
+
+Cache low-risk posts.
+
+Skip neutral low-signal posts when above threshold.
+
+Use hybrid model routing.
+
+6.3 Integration with Trackback
+
+Sentiment score becomes:
+
+{
+  "sentiment": "negative",
+  "confidence": 0.87,
+  "brand_relevance": true,
+  "explanation": "...",
+  "sentiment_vector": [...optional...],
+  "negative_type": "customer_dissatisfaction"
+}
+
+6.4 Observability
+
+Logs include prompt, model version, latency, token usage.
+
+Debug dashboard supports:
+
+Test queries
+
+Label comparison
+
+Confusion matrices
+
+Drift detection
+
+7. Evaluation & Testing Strategy
+7.1 Metrics
+
+Precision (primary metric)
+
+Recall
+
+F1
+
+Accuracy
+
+Latency
+
+Cost per 1k posts
+
+Explanatory consistency
+
+7.2 Datasets
+
+Gold-standard human-labelled set (~1k posts initially).
+
+Hard-case set (sarcasm, emojis, ellipses).
+
+Live pilot dataset (shadow mode).
+
+7.3 Testing tools
+
+Weights & Biases
+
+Excel for business-friendly confusion matrices
+
+Local Jupyter / Kaggle experiments
+
+Model router A/B testing
+
+Automated sample drift tests (daily)
+
+7.4 Human Validation Loop
+
+Weekly review of 100 random posts.
+
+Error categorisation.
+
+Labels fed into retraining.
+
+8. Non-Functional Requirements
+Accuracy
+
+Must beat current vendor by ≥ 20–30% on precision for negative sentiment.
+
+Latency
+
+Under 300–500ms per classification in production.
+
+Cost
+
+Under vendor cost or demonstrably superior accuracy.
+
+Scalability
+
+Must handle bursts during events (e.g., sportsbook controversies, outages).
+
+Security
+
+GDPR-compliant.
+
+Full audit trail.
+
+9. Risks & Assumptions
+Risks
+
+Insufficient labelled data early on.
+
+Drift in social media slang.
+
+Cost spikes for hybrid models.
+
+Regulatory requirements may demand explainability.
+
+Assumptions
+
+Access to AWS Gemma is stable.
+
+Dev resources for endpoint integration are available.
+
+Internal compliance stakeholders will help label data.
+
+10. Stakeholder Map
+Role	Person	Responsibility
+Product / ML Lead	Trevor	Direction, experiments, documentation
+ML Engineering	Adam	AWS Gemma, infra, experiments
+Backend Dev	TBD	Integration, API, system design
+Compliance Managers	Internal team	Provide domain knowledge & labels
+Clients	Operators & affiliates	Consumers of improved sentiment

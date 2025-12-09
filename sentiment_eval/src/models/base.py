@@ -39,19 +39,45 @@ class SentimentModel(ABC):
             return self._prompt_config["system"]
         return self._get_default_system_prompt()
 
-    def get_user_message(self, text: str) -> str:
+    def get_user_message(self, text: str, **kwargs) -> str:
         """
         Get the formatted user message for the given text.
 
         Args:
             text: The text to analyze.
+            **kwargs: Additional template variables (e.g., brand_name).
 
         Returns:
-            Formatted user message with text substituted.
+            Formatted user message with text and other variables substituted.
         """
         if self._prompt_config and "user_template" in self._prompt_config:
-            return self._prompt_config["user_template"].format(text=text)
+            template = self._prompt_config["user_template"]
+            # Build format dict with text and any additional kwargs
+            format_dict = {"text": text, **kwargs}
+            try:
+                return template.format(**format_dict)
+            except KeyError as e:
+                # If a template variable is missing, fall back to just text
+                return template.format(text=text, brand_name=kwargs.get("brand_name", "Unknown"))
         return text
+    
+    def get_system_prompt_formatted(self, **kwargs) -> str:
+        """
+        Get the system prompt with optional variable substitution.
+        
+        Args:
+            **kwargs: Variables to substitute in the system prompt (e.g., brand_name).
+            
+        Returns:
+            Formatted system prompt.
+        """
+        system = self.get_system_prompt()
+        if kwargs:
+            try:
+                return system.format(**kwargs)
+            except KeyError:
+                return system
+        return system
 
     def _get_default_system_prompt(self) -> str:
         """
