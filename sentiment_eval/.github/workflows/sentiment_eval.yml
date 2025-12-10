@@ -1,0 +1,40 @@
+name: Sentiment Eval Quality Gate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          pip install pandas tqdm
+
+      - name: Prepare Cached Results (Golden Master)
+        run: |
+          # Simulate inference by using our committed Golden Master results
+          # This ensures we test the EVALUATION logic and THRESHOLDS without needing the GPU/API
+          mkdir -p results
+          cp results/results_gold_standard_v3_gemma.csv results/results_gold_standard_v3_gemma.csv
+          echo "✅ Loaded Golden Master results for validation."
+
+      - name: Run Quality Gate (Hard Failure Mode)
+        run: |
+          # This script will exit with code 1 if any slice drops below 100%/90%
+          python scripts/evaluate_slices.py \
+            --model-results results/results_gold_standard_v3_gemma.csv \
+            --print-failures

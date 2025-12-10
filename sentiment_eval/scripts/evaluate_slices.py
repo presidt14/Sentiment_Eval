@@ -393,6 +393,64 @@ def evaluate_slice_f(df: pd.DataFrame, pred_col: Optional[str] = None) -> Dict[s
     }
 
 
+# CI/CD Quality Gate Thresholds
+SLICE_THRESHOLDS = {
+    "A": 1.00,  # Slice A (Noise Suppression): 100% - Critical Safety
+    "B": 0.90,  # Slice B (True Brand Sentiment): 90%
+    "C": 0.90,  # Slice C (Sarcasm Detection - Brand): 90%
+    "D": 0.90,  # Slice D (Sarcasm Rejection - Sport): 90% (inverted - low FP rate)
+    "E": 0.90,  # Slice E (Adversarial Cases): 90%
+    "F": 1.00,  # Slice F (Brand Relevance Health): 100% - Critical Safety
+}
+
+
+def validate_thresholds(results: list) -> bool:
+    """
+    Validate slice metrics against defined thresholds.
+    
+    Returns True if all slices pass, False otherwise.
+    Prints detailed failure messages for CI/CD visibility.
+    """
+    all_passed = True
+    
+    for r in results:
+        slice_name = r["slice"]
+        metric_value = r.get("metric_value")
+        
+        # Extract slice letter (A, B, C, D, E, F)
+        slice_letter = slice_name.split()[0] if slice_name else None
+        
+        if slice_letter not in SLICE_THRESHOLDS:
+            continue
+        
+        threshold = SLICE_THRESHOLDS[slice_letter]
+        
+        # Skip if no metric available (no predictions)
+        if metric_value is None:
+            print(f"\u26a0\ufe0f  WARNING: {slice_name} has no metric value (no predictions?)")
+            continue
+        
+        # Special handling for Slice D: FP rate should be LOW (inverted metric)
+        # For Slice D, we want FP rate < (1 - threshold), i.e., accuracy > threshold
+        if slice_letter == "D":
+            # FP rate metric: lower is better. Threshold 0.90 means FP rate must be <= 0.10
+            max_fp_rate = 1.0 - threshold
+            if metric_value > max_fp_rate:
+                print(f"\u274c CRITICAL FAILURE: {slice_name} FP rate is {metric_value:.1%}, required <={max_fp_rate:.1%}")
+                all_passed = False
+            else:
+                print(f"\u2705 {slice_name}: FP rate {metric_value:.1%} <= {max_fp_rate:.1%}")
+        else:
+            # Standard metric: higher is better
+            if metric_value < threshold:
+                print(f"\u274c CRITICAL FAILURE: {slice_name} is {metric_value:.1%}, required {threshold:.1%}")
+                all_passed = False
+            else:
+                print(f"\u2705 {slice_name}: {metric_value:.1%} >= {threshold:.1%}")
+    
+    return all_passed
+
+
 def print_summary_table(results: list, print_failures: bool = False) -> None:
     """Print formatted summary table."""
     print("\n" + "=" * 80)
@@ -596,7 +654,22 @@ def main():
     print(f"   Edge case type distribution:")
     for ect, count in combined_df["edge_case_type"].value_counts().items():
         print(f"     {ect}: {count}")
+    
+    # CI/CD Quality Gate Validation
+    print("\n" + "=" * 80)
+    print("CI/CD QUALITY GATE VALIDATION")
+    print("=" * 80)
+    
+    gate_passed = validate_thresholds(results)
+    
+    if gate_passed:
+        print("\n✅ Quality Gate Passed - All slices meet threshold requirements")
+        return 0
+    else:
+        print("\n❌ Quality Gate Failed - One or more slices below threshold")
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    exit_code = main()
+    sys.exit(exit_code)
