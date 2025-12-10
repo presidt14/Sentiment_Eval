@@ -303,7 +303,97 @@ def evaluate_slice_e(df: pd.DataFrame, pred_col: Optional[str] = None) -> Dict[s
     }
 
 
-def print_summary_table(results: list) -> None:
+def evaluate_slice_f(df: pd.DataFrame, pred_col: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Slice F: Brand Relevance Health (Gatekeeper Metric)
+    
+    Monitors the "Master Switch" - brand_relevance classification accuracy.
+    This ensures the model isn't silently wiping valid risks by incorrectly
+    marking them as Irrelevant.
+    
+    Metric: Brand relevance accuracy (overall and by edge_case_type)
+    """
+    # Find brand relevance prediction column
+    if pred_col:
+        model_prefix = pred_col.replace("_sentiment", "")
+        brand_rel_pred_col = f"{model_prefix}_brand_relevance"
+    else:
+        brand_rel_pred_col = None
+    
+    # Filter to rows with valid brand_relevance labels
+    df_valid = df[df["brand_relevance"].notna()].copy()
+    
+    if len(df_valid) == 0:
+        return {"slice": "F - Brand Relevance Health", "count": 0, "metric_value": None}
+    
+    # Normalize brand_relevance labels
+    def normalize_brand_rel(val):
+        if pd.isna(val):
+            return None
+        if isinstance(val, bool):
+            return val
+        val_str = str(val).lower().strip()
+        if val_str in ("true", "1", "yes"):
+            return True
+        elif val_str in ("false", "0", "no"):
+            return False
+        return None
+    
+    df_valid["_label_br"] = df_valid["brand_relevance"].apply(normalize_brand_rel)
+    df_valid = df_valid[df_valid["_label_br"].notna()]
+    
+    if len(df_valid) == 0:
+        return {"slice": "F - Brand Relevance Health", "count": 0, "metric_value": None}
+    
+    failures = []
+    breakdown_by_type = {}
+    
+    if brand_rel_pred_col and brand_rel_pred_col in df_valid.columns:
+        df_valid["_pred_br"] = df_valid[brand_rel_pred_col].apply(normalize_brand_rel)
+        
+        # Overall accuracy
+        valid_preds = df_valid[df_valid["_pred_br"].notna()]
+        if len(valid_preds) > 0:
+            accuracy = (valid_preds["_label_br"] == valid_preds["_pred_br"]).mean()
+            metric_name = "Brand Relevance Accuracy"
+            
+            # Breakdown by edge_case_type
+            for ect in valid_preds["edge_case_type"].unique():
+                ect_df = valid_preds[valid_preds["edge_case_type"] == ect]
+                if len(ect_df) > 0:
+                    ect_acc = (ect_df["_label_br"] == ect_df["_pred_br"]).mean()
+                    breakdown_by_type[ect] = {"count": len(ect_df), "accuracy": ect_acc}
+            
+            # Find failures
+            mask = valid_preds["_label_br"] != valid_preds["_pred_br"]
+            for idx, row in valid_preds[mask].iterrows():
+                failures.append({
+                    "post_id": row.get("post_id", idx),
+                    "text": str(row.get("text", ""))[:60],
+                    "edge_case_type": row.get("edge_case_type"),
+                    "expected_relevance": row["_label_br"],
+                    "predicted_relevance": row["_pred_br"],
+                })
+        else:
+            accuracy = None
+            metric_name = "No valid predictions"
+    else:
+        accuracy = None
+        metric_name = "Human label distribution (baseline)"
+    
+    return {
+        "slice": "F - Brand Relevance Health",
+        "filter": "brand_relevance is not null",
+        "count": len(df_valid),
+        "metric_name": metric_name,
+        "metric_value": accuracy,
+        "failures": failures,
+        "breakdown_by_type": breakdown_by_type,
+        "label_dist": df_valid["brand_relevance"].value_counts().to_dict() if accuracy is None else None,
+    }
+
+
+def print_summary_table(results: list, print_failures: bool = False) -> None:
     """Print formatted summary table."""
     print("\n" + "=" * 80)
     print("SLICE-BASED EVALUATION SUMMARY")
@@ -329,22 +419,56 @@ def print_summary_table(results: list) -> None:
     
     print("-" * 80)
     
-    # Print failures for Slice C if any
+    # Print Slice F breakdown by edge_case_type if available
     for r in results:
-        if r["slice"].startswith("C") and r.get("failures"):
-            print(f"\n⚠️  Slice C Failures ({len(r['failures'])} cases):")
-            for f in r["failures"]:
-                text_preview = str(f.get("text", ""))[:60] + "..."
-                print(f"  - ID {f.get('post_id')}: {text_preview}")
+        if r["slice"].startswith("F") and r.get("breakdown_by_type"):
+            print(f"\n📊 Slice F - Brand Relevance by Edge Case Type:")
+            for ect, stats in sorted(r["breakdown_by_type"].items(), key=lambda x: x[1]["accuracy"]):
+                print(f"    {ect:<40} n={stats['count']:>3}  acc={stats['accuracy']:.1%}")
     
-    # Print failures for Slice E if any
-    for r in results:
-        if r["slice"].startswith("E") and r.get("failures"):
-            print(f"\n⚠️  Slice E Failures ({len(r['failures'])} cases):")
-            for f in r["failures"]:
-                text_preview = str(f.get("text", ""))[:60] + "..."
-                print(f"  - [{f.get('edge_case_type')}] Expected: {f.get('expected')}, Got: {f.get('predicted')}")
-                print(f"    Text: {text_preview}")
+    # Print failures only if --print-failures flag is set
+    if print_failures:
+        print("\n" + "=" * 80)
+        print("DETAILED FAILURE ANALYSIS (--print-failures)")
+        print("=" * 80)
+        
+        for r in results:
+            failures = r.get("failures", [])
+            if failures:
+                print(f"\n⚠️  {r['slice']} Failures ({len(failures)} cases):")
+                for f in failures:
+                    text_preview = str(f.get("text", ""))[:60] + "..."
+                    
+                    # Format expected vs predicted
+                    if "expected_relevance" in f:
+                        # Brand relevance failure
+                        expected = f"Relevance={f.get('expected_relevance')}"
+                        predicted = f"Relevance={f.get('predicted_relevance')}"
+                    else:
+                        # Sentiment failure
+                        expected = f"Sentiment={f.get('expected', f.get('human_sentiment', 'N/A'))}"
+                        predicted = f"Sentiment={f.get('predicted', 'N/A')}"
+                    
+                    print(f"  [{f.get('edge_case_type', 'unknown')}]")
+                    print(f"    Expected: {expected}")
+                    print(f"    Predicted: {predicted}")
+                    print(f"    Text: {text_preview}")
+    else:
+        # Legacy: still show failures for Slice C and E even without flag
+        for r in results:
+            if r["slice"].startswith("C") and r.get("failures"):
+                print(f"\n⚠️  Slice C Failures ({len(r['failures'])} cases):")
+                for f in r["failures"]:
+                    text_preview = str(f.get("text", ""))[:60] + "..."
+                    print(f"  - ID {f.get('post_id')}: {text_preview}")
+        
+        for r in results:
+            if r["slice"].startswith("E") and r.get("failures"):
+                print(f"\n⚠️  Slice E Failures ({len(r['failures'])} cases):")
+                for f in r["failures"]:
+                    text_preview = str(f.get("text", ""))[:60] + "..."
+                    print(f"  - [{f.get('edge_case_type')}] Expected: {f.get('expected')}, Got: {f.get('predicted')}")
+                    print(f"    Text: {text_preview}")
     
     print()
 
@@ -380,6 +504,11 @@ def main():
         type=str,
         default="data/gold_standard/adversarial_cases.csv",
         help="Path to adversarial cases CSV (optional)",
+    )
+    parser.add_argument(
+        "--print-failures",
+        action="store_true",
+        help="Print detailed failure analysis for all slices",
     )
     
     args = parser.parse_args()
@@ -454,9 +583,10 @@ def main():
         evaluate_slice_c(combined_df, pred_col),
         evaluate_slice_d(combined_df, pred_col),
         evaluate_slice_e(combined_df, pred_col),
+        evaluate_slice_f(combined_df, pred_col),
     ]
     
-    print_summary_table(results)
+    print_summary_table(results, print_failures=args.print_failures)
     
     # Save combined dataset
     output_path.parent.mkdir(parents=True, exist_ok=True)
