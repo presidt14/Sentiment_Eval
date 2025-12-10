@@ -46,34 +46,6 @@ class GemmaSentimentModel(SentimentModel):
         if prompt_config:
             self.set_prompt_config(prompt_config)
 
-    def _apply_zone_of_control_guardrail(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Enforce Zone of Control Contract.
-        
-        If brand_relevance is False, the post is not about the brand's controlled
-        aspects (e.g., sport outcomes, user's own gambling choices). Therefore,
-        it cannot be a negative sentiment ABOUT the brand.
-        
-        This guardrail ensures consistent behavior across all consumers of this
-        model (API, CLI, notebooks, etc.).
-        """
-        brand_relevance = result.get("brand_relevance")
-        
-        # Parse brand_relevance if it's a string
-        if isinstance(brand_relevance, str):
-            brand_relevance = brand_relevance.lower() in ("true", "1", "yes")
-        
-        if brand_relevance is False:
-            original_sentiment = result.get("sentiment")
-            if original_sentiment != "neutral":
-                result["sentiment"] = "neutral"
-                result["negative_type"] = None
-                # Append guardrail note to reason
-                original_reason = result.get("reason", "")
-                result["reason"] = f"{original_reason} [Guardrail: not brand-relevant]"
-        
-        return result
-
     def _parse_response(self, content: str) -> Dict[str, Any]:
         """Parse LLM response to extract structured sentiment data."""
         # Try to extract JSON from response

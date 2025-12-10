@@ -6,6 +6,7 @@ from .deepseek import DeepseekSentimentModel
 from .gemini import GeminiSentimentModel
 from .gemma import GemmaSentimentModel
 from .mock import MockSentimentModel
+from .openai_model import OpenAISentimentModel
 
 
 def get_active_models(

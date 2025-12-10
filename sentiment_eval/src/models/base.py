@@ -10,10 +10,50 @@ class SentimentModel(ABC):
     Base class for sentiment analysis models.
 
     Supports externalized prompts via prompt_config parameter.
+    
+    CRITICAL: All models inherit the Zone of Control guardrail via
+    _apply_zone_of_control_guardrail() which enforces:
+    - If brand_relevance=False → sentiment must be "neutral"
+    
+    This ensures consistent safety behavior across ALL providers.
     """
 
     name: str
     _prompt_config: Optional[Dict[str, Any]] = None
+
+    def _apply_zone_of_control_guardrail(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enforce Zone of Control Contract.
+        
+        If brand_relevance is False, the post is not about the brand's controlled
+        aspects (e.g., sport outcomes, user's own gambling choices). Therefore,
+        it cannot be a negative sentiment ABOUT the brand.
+        
+        This guardrail ensures consistent behavior across all consumers of this
+        model (API, CLI, notebooks, etc.) and ALL model providers.
+        
+        Args:
+            result: Raw model output dict with sentiment, brand_relevance, etc.
+            
+        Returns:
+            Result dict with guardrail applied.
+        """
+        brand_relevance = result.get("brand_relevance")
+        
+        # Parse brand_relevance if it's a string
+        if isinstance(brand_relevance, str):
+            brand_relevance = brand_relevance.lower() in ("true", "1", "yes")
+        
+        if brand_relevance is False:
+            original_sentiment = result.get("sentiment")
+            if original_sentiment != "neutral":
+                result["sentiment"] = "neutral"
+                result["negative_type"] = None
+                # Append guardrail note to reason
+                original_reason = result.get("reason", "")
+                result["reason"] = f"{original_reason} [Guardrail: not brand-relevant]"
+        
+        return result
 
     def set_prompt_config(self, prompt_config: Dict[str, Any]) -> None:
         """

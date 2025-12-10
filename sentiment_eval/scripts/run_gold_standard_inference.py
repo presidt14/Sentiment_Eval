@@ -46,26 +46,10 @@ def load_gold_standard(path: Path) -> pd.DataFrame:
 
 
 def get_model_instance(model_name: str, prompt_strategy: str = "compliance_risk_assessor"):
-    """Get a specific model instance with prompt strategy."""
-    prompt_config = get_prompt_strategy(prompt_strategy)
-    
-    if model_name == "mock":
-        from src.models.mock import MockSentimentModel
-        return MockSentimentModel(seed=42, prompt_config=prompt_config)
-    elif model_name == "gemma":
-        from src.models.gemma import GemmaSentimentModel
-        return GemmaSentimentModel(prompt_config=prompt_config)
-    elif model_name == "claude":
-        from src.models.claude import ClaudeSentimentModel
-        return ClaudeSentimentModel(prompt_config=prompt_config)
-    elif model_name == "gemini":
-        from src.models.gemini import GeminiSentimentModel
-        return GeminiSentimentModel(prompt_config=prompt_config)
-    elif model_name == "deepseek":
-        from src.models.deepseek import DeepseekSentimentModel
-        return DeepseekSentimentModel(prompt_config=prompt_config)
-    else:
-        raise ValueError(f"Unknown model: {model_name}")
+    """Get a specific model instance with prompt strategy using the model factory."""
+    # Use the centralized model factory
+    from src.model_factory import get_model
+    return get_model(provider_name=model_name, prompt_strategy=prompt_strategy)
 
 
 def run_inference_sync(
@@ -177,7 +161,13 @@ def main():
         "--model",
         type=str,
         default=None,
-        help="Model to use (gemma, claude, gemini, deepseek, mock)",
+        help="Model to use (gemma, claude, openai, gemini, deepseek, mock)",
+    )
+    parser.add_argument(
+        "--provider",
+        type=str,
+        default=None,
+        help="Alias for --model (gemma, claude, openai, gemini, deepseek, mock)",
     )
     parser.add_argument(
         "--mock",
@@ -214,16 +204,19 @@ def main():
         print("  python scripts/evaluate_slices.py")
         sys.exit(1)
     
-    # Determine model
+    # Determine model (--provider is alias for --model)
     if args.mock:
         model_name = "mock"
     elif args.model:
         model_name = args.model
+    elif args.provider:
+        model_name = args.provider
     else:
-        print("Error: Specify --model or --mock")
+        print("Error: Specify --model, --provider, or --mock")
         print("\nExamples:")
         print("  python scripts/run_gold_standard_inference.py --mock")
         print("  python scripts/run_gold_standard_inference.py --model gemma")
+        print("  python scripts/run_gold_standard_inference.py --provider openai")
         sys.exit(1)
     
     # Output path

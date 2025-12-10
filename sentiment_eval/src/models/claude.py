@@ -46,7 +46,9 @@ class ClaudeSentimentModel(SentimentModel):
             data = resp.json()
             # Expect content block to contain JSON text
             content = data["content"][0]["text"]
-            return json.loads(content)
+            result = json.loads(content)
+            # Apply Zone of Control guardrail (inherited from base)
+            return self._apply_zone_of_control_guardrail(result)
         except requests.exceptions.RequestException as e:
             # Mock failure for dry run
             return {

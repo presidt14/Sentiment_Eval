@@ -1,89 +1,107 @@
-# Multi-Model Sentiment Evaluation Starter Kit
+# Compliance Sentiment Engine 🛡️
 
-Runs social posts through multiple LLM sentiment providers (Gemma, Claude, Gemini, DeepSeek), compares them to human labels, and generates reports.
+A production-grade sentiment analysis system designed for the betting industry. It distinguishes between actionable **Brand Risk** (e.g., "Withdrawal failed") and ignorable **Sport Sarcasm** (e.g., "My horse ran backwards").
 
-## Quick Start
+## 🚀 Key Features
 
-```bash
-# Create venv and install
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # Linux/macOS
-pip install -r requirements.txt
+* **Zone of Control Logic:** Automatically filters out complaints about match results, referees, or bad luck.
+* **Safety Guardrails:** Hard-coded logic (`src/models/base.py`) forces `Sentiment=NEUTRAL` if `BrandRelevance=FALSE`.
+* **Hard-Gate CI/CD:** GitHub Actions pipeline blocks any code change that drops accuracy below 100% on critical slices.
+* **Multi-Model Support:** Swap between Gemma, Claude, OpenAI, and DeepSeek with a single CLI flag.
+* **Observability:** Streamlit Dashboard for failure analysis and data curation.
 
-# Configure API keys
-cp .env.example .env
-# Edit .env with your keys
+## 📂 Project Structure
 
-# Validate environment
-python -m src.validate_env
+```text
+├── .github/workflows/       # CI/CD Quality Gate
+├── data/
+│   └── gold_standard/       # v3 Gold Standard (The Source of Truth)
+├── docs/
+│   └── labeling_guidelines.md  # Taxonomy & Rulebook
+├── results/                 # Cached Golden Results
+├── scripts/
+│   ├── dashboard.py         # Streamlit Analysis Tool
+│   └── evaluate_slices.py   # The Examiner (Slices A-F)
+└── src/
+    ├── models/              # Model Implementations (Gemma, OpenAI, Claude, DeepSeek)
+    └── model_factory.py     # Factory Pattern for Model Selection
 ```
 
-## Usage
+## 🛠️ Usage
 
-### Batch Processing
-```bash
-python -m src.run_batch --input data/samples/posts_sample.csv
-```
+### 1. Run the Dashboard
 
-### Evaluate & Report
-```bash
-python -m src.evaluate    # Accuracy, F1-Score, Confusion Matrix
-python -m src.report      # Generate markdown summary
-```
-
-### Interactive UI
-```bash
-streamlit run app.py
-```
-
----
-
-## Advanced Features
-
-### Mock Mode (No API Keys Required)
-Test the full pipeline without API calls using deterministic mock responses:
-```bash
-# Via Makefile
-make mock
-
-# Or directly
-python -m src.run_batch --input data/samples/posts_sample.csv --config config/settings.mock.yaml
-```
-Mock mode uses `seed: 42` for reproducible results.
-
-### Async Processing
-For large batches, enable concurrent API calls:
-```bash
-python -m src.run_batch --input data/samples/posts_sample.csv --async
-```
-
-### Prompt Strategies
-Customize LLM behavior via `config/prompts.yaml`. Available strategies:
-
-| Strategy | Use Case |
-|----------|----------|
-| `default_sentiment` | Standard i-gaming/compliance classification |
-| `sarcasm_detector` | Detects irony and hidden sentiment |
-| `strict_compliance` | Conservative risk-focused classification |
-| `customer_feedback` | Customer review analysis |
-| `multilingual` | Mixed-language and code-switching support |
-
-### Human Labeling Workflow
-1. Upload data via **Data Upload** page in Streamlit UI
-2. Label posts manually in the interface
-3. Export labeled data for evaluation
-
----
-
-## Automation
+Visualize results and fix labels interactively.
 
 ```bash
-make setup   # Install dependencies
-make test    # Run pytest
-make mock    # Run mock batch
-make ui      # Launch Streamlit
-make clean   # Remove cache/temp files
+streamlit run scripts/dashboard.py
 ```
 
-Windows users: Use `run_demo.bat` for a guided demo.
+### 2. Run Evaluation (CLI)
+
+Test the model against the Gold Standard.
+
+```bash
+python scripts/evaluate_slices.py --model-results results/results_gold_standard_v3_gemma.csv --print-failures
+```
+
+### 3. Run Inference
+
+```bash
+# Default (Gemma)
+python scripts/run_gold_standard_inference.py --model gemma
+
+# Switch providers
+python scripts/run_gold_standard_inference.py --model claude
+python scripts/run_gold_standard_inference.py --model openai
+python scripts/run_gold_standard_inference.py --model deepseek
+
+# Mock mode (no API keys needed)
+python scripts/run_gold_standard_inference.py --mock
+```
+
+## 🔐 Environment Variables
+
+Create a `.env` file with your API keys:
+
+```bash
+NEBIUS_API_KEY=your_nebius_key      # For Gemma
+ANTHROPIC_API_KEY=your_anthropic_key # For Claude
+OPENAI_API_KEY=your_openai_key       # For GPT-4
+DEEPSEEK_API_KEY=your_deepseek_key   # For DeepSeek
+```
+
+## 🐳 Docker
+
+```bash
+# Build
+docker build -t sentiment-engine .
+
+# Run Dashboard
+docker run -p 8501:8501 sentiment-engine
+
+# Run Inference (with API keys)
+docker run -e NEBIUS_API_KEY=xxx sentiment-engine python scripts/run_gold_standard_inference.py --model gemma
+```
+
+## 📊 Evaluation Slices
+
+| Slice | Description | Threshold |
+|-------|-------------|-----------|
+| A | Noise Suppression (promo/irrelevant) | 100% |
+| B | True Brand Sentiment | 90% |
+| C | Sarcasm Detection (Brand) | 90% |
+| D | Sarcasm Rejection (Sport) | 90% |
+| E | Adversarial Cases | 90% |
+| F | Brand Relevance Health | 100% |
+
+## 🔒 Zone of Control Guardrail
+
+The safety guardrail is enforced in `src/models/base.py` and inherited by ALL models:
+
+```python
+if brand_relevance == False:
+    sentiment = "neutral"  # Cannot be negative about things outside brand control
+```
+
+This ensures consistent behavior regardless of which LLM provider is used.
