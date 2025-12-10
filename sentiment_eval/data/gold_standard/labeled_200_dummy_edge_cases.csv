@@ -1,0 +1,9 @@
+id,text,human_sentiment,brand_relevance,negative_type,edge_case_type,notes
+1,🌟 INCREDIBLE OFFER FROM WILLIAM HILL 🌟 Get £60 when you sign up today 💰,NEUTRAL,False,,promo_hype,"Promotional hype, offer-focused language and emojis"
+2,Rangers to win 40/1 – boosted odds available now!,NEUTRAL,False,,promo_hype,Odds broadcast only
+3,Great tip William Hill 😂 absolute banker that…,NEUTRAL,False,,sarcasm_sport,"Sarcasm about betting outcome, not brand behaviour"
+4,"Cheers William Hill, another AMAZING boost that lost 🙃",NEUTRAL,False,,sarcasm_sport,"Mockery of offer result, not operational criticism"
+5,"Nice one William Hill, another 'instant' withdrawal pending for 3 days.",NEGATIVE,True,customer_dissatisfaction,sarcasm_brand,Quoted praise used sarcastically about withdrawal delays
+6,Love how William Hill lets you win £5 then limits you. Very generous.,NEGATIVE,True,scam_accusation,sarcasm_brand,Sarcasm targeting brand restriction policy
+7,Took the William Hill signup offer – bonus was fine but support is useless.,NEGATIVE,True,customer_support,mixed_review,Offer mentioned but main signal is support complaint
+8,William Hill things 🤡,NEUTRAL,False,,meme_ambiguous,Vague meme-style post with no actionable claim

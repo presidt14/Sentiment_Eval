@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional
+import pandas as pd
 
 SENTIMENT_SCHEMA = {"negative", "neutral", "positive"}
 
@@ -28,10 +29,12 @@ ESCALATION_KEYWORDS = {
 
 
 def normalise_sentiment(label: str) -> str:
+    if label is None or (isinstance(label, float) and pd.isna(label)):
+        return "neutral"
     if not label:
         return "neutral"
 
-    l = label.strip().lower()
+    l = str(label).strip().lower()
     if "pos" in l:
         return "positive"
     elif "neg" in l:

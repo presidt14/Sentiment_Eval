@@ -6,8 +6,12 @@ active_models:
 
 gemma:
   provider: gemma
-  gemma url: "https://internal-gemma-endpoint.example.com/v1/sentiment"
-  timeout_seconds: 10
+  # Nebius TokenFactory API (OpenAI-compatible)
+  base_url: "https://api.tokenfactory.nebius.com/v1/"
+  model: "google/gemma-3-27b-it"
+  timeout_seconds: 30
+  temperature: 0.1
+  max_tokens: 512
 
 claude:
   provider: claude

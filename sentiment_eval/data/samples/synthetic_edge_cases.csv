@@ -1,0 +1,14 @@
+text,human_sentiment,brand_relevance,edge_case_type,notes
+"💥 SUPERB WILLIAM HILL OFFER 💥 Get £60 when you sign up! 40/1 odds on Chelsea!",NEUTRAL,False,promo_hype,"Standard affiliate spam with emojis"
+"Bet £10 Get £30 | T&Cs Apply | 18+ #Ad",NEUTRAL,False,promo_hype,"Transactional noise"
+"Actually really impressed with how fast the withdrawal was today. Thanks William Hill.",POSITIVE,True,normal,"Genuine user praise"
+"I've been waiting 3 days for my account verification. This is ridiculous.",NEGATIVE,True,normal,"Genuine user complaint"
+"Oh wow, another 'technical issue' right when I try to cash out. Great timing as always William Hill 🤡",NEGATIVE,True,sarcasm_brand,"Sarcastic praise disguising a complaint about service stability"
+"Love how they limit my stakes to 50p after I win once. Best bookie ever! NOT.",NEGATIVE,True,sarcasm_brand,"Sarcasm about account restriction"
+"Thanks William Hill for the boosted odds on that horse. It's still running backwards 🙄",NEUTRAL,False,sarcasm_sport,"User is annoyed at the sport result, not the bookie."
+"Genius bet by me using the boost. Lost in 5 seconds. #clown",NEUTRAL,False,sarcasm_sport,"Self-deprecating sarcasm, irrelevant to brand."
+"The sign up offer was huge but the app crashes every 5 minutes.",NEGATIVE,True,mixed_review,"Acknowledges promo (hype) but complains about tech (sentiment)."
+"William Hill admin right now: 
+
+[Image of sweating guy]
+",NEUTRAL,False,meme_ambiguous,"Vague meme, safest to ignore."
